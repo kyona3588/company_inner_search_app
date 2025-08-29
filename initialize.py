@@ -19,6 +19,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 import constants as ct
+from langchain_community.vectorstores import FAISS
 
 
 ############################################################
@@ -108,7 +109,7 @@ def initialize_retriever():
     # すでにRetrieverが作成済みの場合、後続の処理を中断
     if "retriever" in st.session_state:
         return
-    
+
     # RAGの参照先となるデータソースの読み込み
     docs_all = load_data_sources()
 
@@ -117,25 +118,24 @@ def initialize_retriever():
         doc.page_content = adjust_string(doc.page_content)
         for key in doc.metadata:
             doc.metadata[key] = adjust_string(doc.metadata[key])
-    
+
     # 埋め込みモデルの用意
     embeddings = OpenAIEmbeddings()
-    
+
     # チャンク分割用のオブジェクトを作成
     text_splitter = CharacterTextSplitter(
-        chunk_size=ct.CHUNK_SIZE,         # 問題2の解答：チャンクサイズ
-        chunk_overlap=ct.CHUNK_OVERLAP,   # 問題2の解答：チャンクのオーバーラップ
+        chunk_size=ct.CHUNK_SIZE,         # チャンクサイズ
+        chunk_overlap=ct.CHUNK_OVERLAP,   # チャンクのオーバーラップ
         separator="\n"
     )
 
     # チャンク分割を実施
     splitted_docs = text_splitter.split_documents(docs_all)
 
-    # ベクターストアの作成
-    # Streamlit Cloud等でsqlite3バージョン問題を回避するためin-memoryモードで作成
-    db = Chroma.from_documents(splitted_docs, embedding=embeddings, persist_directory=None)
+    # ベクターストアの作成（FAISSはsqlite3に依存しない）
+    db = FAISS.from_documents(splitted_docs, embedding=embeddings)
 
-    # ベクターストアを検索するRetrieverの作成　　　　　　　　　　　#問題1の解答
+    # ベクターストアを検索するRetrieverの作成
     st.session_state.retriever = db.as_retriever(search_kwargs={"k": 5})
 
 
@@ -164,12 +164,9 @@ def load_data_sources():
 
     web_docs_all = []
     # ファイルとは別に、指定のWebページ内のデータも読み込み
-    # 読み込み対象のWebページ一覧に対して処理
     for web_url in ct.WEB_URL_LOAD_TARGETS:
-        # 指定のWebページを読み込み
         loader = WebBaseLoader(web_url)
         web_docs = loader.load()
-        # for文の外のリストに読み込んだデータソースを追加
         web_docs_all.extend(web_docs)
     # 通常読み込みのデータソースにWebページのデータを追加
     docs_all.extend(web_docs_all)
