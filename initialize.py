@@ -132,7 +132,8 @@ def initialize_retriever():
     splitted_docs = text_splitter.split_documents(docs_all)
 
     # ベクターストアの作成
-    db = Chroma.from_documents(splitted_docs, embedding=embeddings)
+    # Streamlit Cloud等でsqlite3バージョン問題を回避するためin-memoryモードで作成
+    db = Chroma.from_documents(splitted_docs, embedding=embeddings, persist_directory=None)
 
     # ベクターストアを検索するRetrieverの作成　　　　　　　　　　　#問題1の解答
     st.session_state.retriever = db.as_retriever(search_kwargs={"k": 5})
