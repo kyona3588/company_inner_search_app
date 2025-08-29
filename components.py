@@ -281,7 +281,7 @@ def display_contact_llm_response(llm_response):
             # ページ番号が取得できた場合のみ、ページ番号を表示（ドキュメントによっては取得できない場合がある）
             if "page" in document.metadata:
                 # ページ番号を取得
-                page_number = document.metadata["page"]
+                page_number = document.metadata["page"]+1   # ページNo.1から表示する
                 # 「ファイルパス」と「ページ番号」
                 file_info = f"{file_path}（ページNo. {page_number}）"
             else:
